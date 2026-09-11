@@ -1,12 +1,9 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.cronache.ignoto',
-  appName: 'Cronache dell Ignoto',
+  appId: 'com.cantastorie.app',
+  appName: 'Canta Storie',
   webDir: 'dist',
-  server: {
-    androidScheme: 'https'
-  }
 };
 
-default config;
+export default config;

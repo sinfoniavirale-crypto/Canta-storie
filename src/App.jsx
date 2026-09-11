@@ -1,17 +1,61 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import casi from './data/casi/index.js'
+
+const WORDS_PER_MINUTE = 140
+
+const estimateSeconds = (text) => {
+  const words = text.trim().split(/\s+/).filter(Boolean).length
+  return (words / WORDS_PER_MINUTE) * 60
+}
+
+const formatTime = (seconds) => {
+  const total = Math.max(0, Math.round(seconds))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
 
 export default function App() {
   const [view, setView] = useState('home')
   const [selectedCase, setSelectedCase] = useState(null)
   const [chapterIndex, setChapterIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const playingRef = useRef(false)
+  const [chapterElapsed, setChapterElapsed] = useState(0)
+
+  const playingRef = useState({ current: false })[0]
 
   useEffect(() => {
     playingRef.current = isPlaying
   }, [isPlaying])
+
+  // reset elapsed time within chapter whenever chapter or case changes
+  useEffect(() => {
+    setChapterElapsed(0)
+  }, [chapterIndex, selectedCase])
+
+  // ticking clock, only while playing
+  useEffect(() => {
+    if (!isPlaying) return
+    const id = setInterval(() => {
+      setChapterElapsed((prev) => prev + 1)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [isPlaying, chapterIndex])
+
+  const totalCaseSeconds = useMemo(() => {
+    if (!selectedCase) return 0
+    return selectedCase.chapters.reduce((sum, ch) => sum + estimateSeconds(ch.text), 0)
+  }, [selectedCase])
+
+  const elapsedBaseSeconds = useMemo(() => {
+    if (!selectedCase) return 0
+    return selectedCase.chapters
+      .slice(0, chapterIndex)
+      .reduce((sum, ch) => sum + estimateSeconds(ch.text), 0)
+  }, [selectedCase, chapterIndex])
+
+  const totalElapsed = Math.min(elapsedBaseSeconds + chapterElapsed, totalCaseSeconds)
 
   const openCase = (caso) => {
     setSelectedCase(caso)
@@ -89,6 +133,9 @@ export default function App() {
           </div>
 
           <div>
+            <div className="time-readout">
+              {formatTime(totalElapsed)} / {formatTime(totalCaseSeconds)}
+            </div>
             <div className="controls">
               <button className="skip-btn" onClick={() => skip(-1)}>&laquo;</button>
               <button className="play-btn" onClick={togglePlay}>
@@ -118,13 +165,4 @@ export default function App() {
           <div className="empty-state">Nessun caso disponibile ancora.</div>
         )}
         {casi.map((caso) => (
-          <div className="case-card" key={caso.id} onClick={() => openCase(caso)}>
-            <h2>{caso.title}</h2>
-            <p>{caso.teaser}</p>
-            <span className="chapters-count">{caso.chapters.length} capitoli</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+          <div className="case-card" k

@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import casi from './data/casi/index.js'
 
 const WORDS_PER_MINUTE = 190
 const PROGRESS_KEY = 'cantastorie-progress'
+const MAX_CHUNK_CHARS = 1500
 
 const estimateSeconds = (text) => {
   const words = text.trim().split(/\s+/).filter(Boolean).length
@@ -15,6 +16,26 @@ const formatTime = (seconds) => {
   const m = Math.floor(total / 60)
   const s = total % 60
   return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+// Il motore vocale nativo di Android rifiuta i testi troppo lunghi.
+// Spezziamo ogni capitolo in blocchi più piccoli, tagliando a fine frase,
+// e li leggiamo in sequenza: l'utente sente un'unica narrazione fluida.
+const splitTextIntoChunks = (text, maxChars = MAX_CHUNK_CHARS) => {
+  const sentences = text.split(/(?<=[.!?])\s+/)
+  const chunks = []
+  let current = ''
+  for (const sentence of sentences) {
+    const candidate = current ? current + ' ' + sentence : sentence
+    if (candidate.length > maxChars && current) {
+      chunks.push(current.trim())
+      current = sentence
+    } else {
+      current = candidate
+    }
+  }
+  if (current.trim()) chunks.push(current.trim())
+  return chunks.length > 0 ? chunks : [text]
 }
 
 const loadProgress = () => {
@@ -43,16 +64,13 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [chapterElapsed, setChapterElapsed] = useState(0)
   const [progress, setProgress] = useState({})
+  const [audioError, setAudioError] = useState('')
 
-  const playingRef = useState({ current: false })[0]
+  const playingRef = useRef(false)
 
   useEffect(() => {
     setProgress(loadProgress())
   }, [])
-
-  useEffect(() => {
-    playingRef.current = isPlaying
-  }, [isPlaying])
 
   useEffect(() => {
     setChapterElapsed(0)
@@ -94,18 +112,21 @@ export default function App() {
     setSelectedCase(caso)
     setChapterIndex(startChapter)
     setIsPlaying(false)
+    setAudioError('')
     setView('player')
   }
 
   const restartCase = () => {
+    playingRef.current = false
     setChapterIndex(0)
     setIsPlaying(false)
     TextToSpeech.stop()
   }
 
   const backToHome = async () => {
+    playingRef.current = false
     setIsPlaying(false)
-    await TextToSpeech.stop()
+    try { await TextToSpeech.stop() } catch (e) {}
     setView('home')
   }
 
@@ -126,7 +147,9 @@ export default function App() {
           volume: 1.0,
         })
       } catch (e) {
+        setAudioError(String(e?.message || e))
         setIsPlaying(false)
+        playingRef.current = false
         return
       }
     }
@@ -137,28 +160,32 @@ export default function App() {
         speakChapter(caso, next)
       } else {
         setIsPlaying(false)
+        playingRef.current = false
       }
     }
   }
 
   const togglePlay = () => {
     if (isPlaying) {
-      setIsPlaying(false)
       playingRef.current = false
+      setIsPlaying(false)
       TextToSpeech.stop()
     } else {
-      setIsPlaying(true)
+      setAudioError('')
       playingRef.current = true
+      setIsPlaying(true)
       speakChapter(selectedCase, chapterIndex)
     }
   }
-  
+
   const skip = async (direction) => {
+    playingRef.current = false
     await TextToSpeech.stop()
     const next = chapterIndex + direction
     if (next < 0 || next >= selectedCase.chapters.length) return
     setChapterIndex(next)
     if (isPlaying) {
+      playingRef.current = true
       speakChapter(selectedCase, next)
     }
   }
@@ -175,6 +202,11 @@ export default function App() {
             <div className="chapter-indicator">
               Capitolo {chapterIndex + 1} di {selectedCase.chapters.length}
             </div>
+            {audioError && (
+              <div style={{ color: '#ff6a52', fontSize: 13, marginTop: 10 }}>
+                Errore audio: {audioError}
+              </div>
+            )}
           </div>
 
           <div>

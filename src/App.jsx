@@ -165,4 +165,13 @@ export default function App() {
           <div className="empty-state">Nessun caso disponibile ancora.</div>
         )}
         {casi.map((caso) => (
-          <div className="case-card" k
+          <div className="case-card" key={caso.id} onClick={() => openCase(caso)}>
+            <h2>{caso.title}</h2>
+            <p>{caso.teaser}</p>
+            <span className="chapters-count">{caso.chapters.length} capitoli</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

@@ -70,95 +70,106 @@ body {
   margin-top: 4px;
 }
 
+/* --- SCHERMATA PLAYER: tutto più grande, più in basso, più visibile --- */
+
 .player {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 24px 20px 36px;
+  justify-content: flex-end;
+  padding: 24px 20px 48px;
   text-align: center;
+  min-height: 100vh;
+  gap: 36px;
 }
 
 .player-top {
   width: 100%;
+  margin-top: auto;
 }
 
 .back-btn {
   background: none;
-  border: none;
-  color: #7a7368;
-  font-size: 15px;
-  padding: 10px;
+  border: 2px solid #c9412f;
+  color: #ff6a52;
+  font-size: 20px;
+  font-weight: 600;
+  padding: 16px 28px;
+  border-radius: 14px;
+  letter-spacing: 1px;
 }
 
 .player-case-title {
   font-family: 'Special Elite', monospace;
-  font-size: 22px;
-  margin-top: 10px;
+  font-size: 26px;
+  margin-top: 28px;
   color: #e8e2d4;
 }
 
 .chapter-title {
-  font-size: 15px;
-  color: #c9412f;
-  margin-top: 8px;
+  font-size: 19px;
+  color: #ff6a52;
+  margin-top: 12px;
   letter-spacing: 1px;
 }
 
 .chapter-indicator {
-  font-size: 13px;
-  color: #7a7368;
-  margin-top: 4px;
+  font-size: 16px;
+  color: #a39c8e;
+  margin-top: 6px;
 }
+
 .time-readout {
-  font-size: 15px;
+  font-size: 22px;
   color: #e8e2d4;
   letter-spacing: 1px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
+
 .controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 32px;
   width: 100%;
 }
 
 .play-btn {
-  width: 92px;
-  height: 92px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   background: #c9412f;
   border: none;
   color: #0a0a0d;
-  font-size: 34px;
+  font-size: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 30px rgba(201, 65, 47, 0.5);
+  box-shadow: 0 0 40px rgba(201, 65, 47, 0.6);
 }
 
 .skip-btn {
-  width: 60px;
-  height: 60px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
   background: #14121a;
-  border: 1px solid #2a2530;
+  border: 2px solid #ff6a52;
   color: #e8e2d4;
-  font-size: 22px;
+  font-size: 34px;
 }
 
 .progress-dots {
   display: flex;
-  gap: 8px;
-  margin-top: 24px;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .progress-dots span {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #2a2530;
 }
@@ -166,15 +177,17 @@ body {
 .progress-dots span.active {
   background: #c9412f;
 }
+
 .restart-btn {
-  margin-top: 20px;
+  margin-top: 8px;
   background: none;
-  border: 1px solid #2a2530;
-  color: #7a7368;
-  font-size: 13px;
-  padding: 8px 16px;
-  border-radius: 20px;
+  border: 1px solid #7a7368;
+  color: #a39c8e;
+  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 24px;
 }
+
 .empty-state {
   padding: 40px 20px;
   text-align: center;

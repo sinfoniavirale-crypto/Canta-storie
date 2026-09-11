@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import casi from './data/casi/index.js'
 
-const WORDS_PER_MINUTE = 140
+const WORDS_PER_MINUTE = 190
 
 const estimateSeconds = (text) => {
   const words = text.trim().split(/\s+/).filter(Boolean).length

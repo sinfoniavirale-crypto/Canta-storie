@@ -144,13 +144,15 @@ export default function App() {
   const togglePlay = () => {
     if (isPlaying) {
       setIsPlaying(false)
+      playingRef.current = false
       TextToSpeech.stop()
     } else {
       setIsPlaying(true)
+      playingRef.current = true
       speakChapter(selectedCase, chapterIndex)
     }
   }
-
+  
   const skip = async (direction) => {
     await TextToSpeech.stop()
     const next = chapterIndex + direction

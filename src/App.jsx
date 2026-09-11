@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import casi from './data/casi/index.js'
 
 const WORDS_PER_MINUTE = 190
+const PROGRESS_KEY = 'cantastorie-progress'
 
 const estimateSeconds = (text) => {
   const words = text.trim().split(/\s+/).filter(Boolean).length
@@ -16,34 +17,23 @@ const formatTime = (seconds) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-// Spezza un testo lungo in chunk sicuri per TTS (max ~600 chars, a fine frase)
-const chunkText = (text, maxLen = 600) => {
-  const sentences = text
-    .replace(/\n+/g, ' ')
-    .split(/(?<=[.!?])\s+/)
-    .filter(Boolean)
-
-  const chunks = []
-  let current = ''
-
-  for (const sentence of sentences) {
-    if ((current + ' ' + sentence).length <= maxLen) {
-      current = current ? current + ' ' + sentence : sentence
-    } else {
-      if (current) chunks.push(current)
-      if (sentence.length > maxLen) {
-        // frase troppo lunga: taglia a forza
-        for (let i = 0; i < sentence.length; i += maxLen) {
-          chunks.push(sentence.slice(i, i + maxLen))
-        }
-        current = ''
-      } else {
-        current = sentence
-      }
-    }
+const loadProgress = () => {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch (e) {
+    return {}
   }
-  if (current) chunks.push(current)
-  return chunks
+}
+
+const saveProgress = (caseId, chapterIndex) => {
+  try {
+    const current = loadProgress()
+    current[caseId] = chapterIndex
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(current))
+  } catch (e) {
+    // se il salvataggio fallisce, l'app continua a funzionare comunque
+  }
 }
 
 export default function App() {
@@ -52,8 +42,13 @@ export default function App() {
   const [chapterIndex, setChapterIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [chapterElapsed, setChapterElapsed] = useState(0)
+  const [progress, setProgress] = useState({})
 
-  const playingRef = useRef(false)
+  const playingRef = useState({ current: false })[0]
+
+  useEffect(() => {
+    setProgress(loadProgress())
+  }, [])
 
   useEffect(() => {
     playingRef.current = isPlaying
@@ -71,6 +66,14 @@ export default function App() {
     return () => clearInterval(id)
   }, [isPlaying, chapterIndex])
 
+  // salva il progresso ogni volta che si cambia capitolo
+  useEffect(() => {
+    if (selectedCase) {
+      saveProgress(selectedCase.id, chapterIndex)
+      setProgress((prev) => ({ ...prev, [selectedCase.id]: chapterIndex }))
+    }
+  }, [selectedCase, chapterIndex])
+
   const totalCaseSeconds = useMemo(() => {
     if (!selectedCase) return 0
     return selectedCase.chapters.reduce((sum, ch) => sum + estimateSeconds(ch.text), 0)
@@ -86,16 +89,23 @@ export default function App() {
   const totalElapsed = Math.min(elapsedBaseSeconds + chapterElapsed, totalCaseSeconds)
 
   const openCase = (caso) => {
+    const savedChapter = loadProgress()[caso.id] ?? 0
+    const startChapter = savedChapter < caso.chapters.length ? savedChapter : 0
     setSelectedCase(caso)
-    setChapterIndex(0)
+    setChapterIndex(startChapter)
     setIsPlaying(false)
     setView('player')
   }
 
-  const backToHome = async () => {
-    playingRef.current = false
+  const restartCase = () => {
+    setChapterIndex(0)
     setIsPlaying(false)
-    try { await TextToSpeech.stop() } catch {}
+    TextToSpeech.stop()
+  }
+
+  const backToHome = async () => {
+    setIsPlaying(false)
+    await TextToSpeech.stop()
     setView('home')
   }
 
@@ -104,31 +114,18 @@ export default function App() {
       setIsPlaying(false)
       return
     }
-
-    const fullText = caso.chapters[index].text
-    const chunks = chunkText(fullText, 650)
-
     try {
-      // Assicurati che non ci sia altro in coda
-      try { await TextToSpeech.stop() } catch {}
-
-      for (let i = 0; i < chunks.length; i++) {
-        if (!playingRef.current) break
-
-        await TextToSpeech.speak({
-          text: chunks[i],
-          lang: 'it-IT',
-          rate: 0.95,
-          pitch: 1.0,
-          volume: 1.0,
-        })
-      }
+      await TextToSpeech.speak({
+        text: caso.chapters[index].text,
+        lang: 'it-IT',
+        rate: 0.88,
+        pitch: 0.92,
+        volume: 1.0,
+      })
     } catch (e) {
-      console.log('TTS error', e)
       setIsPlaying(false)
       return
     }
-
     if (playingRef.current) {
       const next = index + 1
       if (next < caso.chapters.length) {
@@ -140,24 +137,22 @@ export default function App() {
     }
   }
 
-  const togglePlay = async () => {
+  const togglePlay = () => {
     if (isPlaying) {
-      playingRef.current = false
       setIsPlaying(false)
-      try { await TextToSpeech.stop() } catch {}
+      TextToSpeech.stop()
     } else {
-      playingRef.current = true
       setIsPlaying(true)
       speakChapter(selectedCase, chapterIndex)
     }
   }
 
   const skip = async (direction) => {
-    try { await TextToSpeech.stop() } catch {}
+    await TextToSpeech.stop()
     const next = chapterIndex + direction
     if (next < 0 || next >= selectedCase.chapters.length) return
     setChapterIndex(next)
-    if (playingRef.current) {
+    if (isPlaying) {
       speakChapter(selectedCase, next)
     }
   }
@@ -192,6 +187,11 @@ export default function App() {
                 <span key={i} className={i === chapterIndex ? 'active' : ''} />
               ))}
             </div>
+            {chapterIndex > 0 && (
+              <button className="restart-btn" onClick={restartCase}>
+                Ricomincia dall'inizio
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -208,13 +208,21 @@ export default function App() {
         {casi.length === 0 && (
           <div className="empty-state">Nessun caso disponibile ancora.</div>
         )}
-        {casi.map((caso) => (
-          <div className="case-card" key={caso.id} onClick={() => openCase(caso)}>
-            <h2>{caso.title}</h2>
-            <p>{caso.teaser}</p>
-            <span className="chapters-count">{caso.chapters.length} capitoli</span>
-          </div>
-        ))}
+        {casi.map((caso) => {
+          const savedChapter = progress[caso.id]
+          const hasProgress = savedChapter > 0 && savedChapter < caso.chapters.length
+          return (
+            <div className="case-card" key={caso.id} onClick={() => openCase(caso)}>
+              <h2>{caso.title}</h2>
+              <p>{caso.teaser}</p>
+              <span className="chapters-count">
+                {hasProgress
+                  ? `Ripreso dal capitolo ${savedChapter + 1} di ${caso.chapters.length}`
+                  : `${caso.chapters.length} capitoli`}
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

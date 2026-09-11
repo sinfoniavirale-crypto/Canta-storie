@@ -166,7 +166,15 @@ body {
 .progress-dots span.active {
   background: #c9412f;
 }
-
+.restart-btn {
+  margin-top: 20px;
+  background: none;
+  border: 1px solid #2a2530;
+  color: #7a7368;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 20px;
+}
 .empty-state {
   padding: 40px 20px;
   text-align: center;

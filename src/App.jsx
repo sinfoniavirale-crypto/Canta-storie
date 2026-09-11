@@ -18,9 +18,6 @@ const formatTime = (seconds) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-// Il motore vocale nativo di Android rifiuta i testi troppo lunghi.
-// Spezziamo ogni capitolo in blocchi più piccoli, tagliando a fine frase,
-// e li leggiamo in sequenza: l'utente sente un'unica narrazione fluida.
 const splitTextIntoChunks = (text, maxChars = MAX_CHUNK_CHARS) => {
   const sentences = text.split(/(?<=[.!?])\s+/)
   const chunks = []
@@ -52,9 +49,64 @@ const saveProgress = (caseId, chapterIndex) => {
     const current = loadProgress()
     current[caseId] = chapterIndex
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(current))
-  } catch (e) {
-    // se il salvataggio fallisce, l'app continua a funzionare comunque
+  } catch (e) {}
+}
+
+// Genera le "razze" (raggi) di una bobina della cassetta, come un mulino a vento
+const ReelSpokes = ({ cx, cy, r }) => {
+  const spokeCount = 6
+  const spokes = []
+  for (let i = 0; i < spokeCount; i++) {
+    const angle = (360 / spokeCount) * i
+    spokes.push(
+      <rect
+        key={i}
+        x={cx - 2.5}
+        y={cy - r}
+        width="5"
+        height={r}
+        fill="#4a4550"
+        transform={`rotate(${angle} ${cx} ${cy})`}
+      />
+    )
   }
+  return <>{spokes}</>
+}
+
+const Cassette = ({ isPlaying, caseTitle, chapterTitle }) => {
+  return (
+    <div className="cassette-wrap">
+      <svg className="cassette" viewBox="0 0 300 190" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="292" height="182" rx="14" fill="#1c1920" stroke="#3a3540" strokeWidth="2" />
+        <rect x="18" y="16" width="264" height="62" rx="4" fill="#ece4d3" />
+        <text x="150" y="36" textAnchor="middle" fontFamily="'Special Elite', monospace" fontSize="13" fill="#1c1920">
+          {(caseTitle || 'CANTA STORIE').toUpperCase()}
+        </text>
+        <text x="150" y="54" textAnchor="middle" fontFamily="'Crimson Text', serif" fontSize="11" fill="#5a5548">
+          {chapterTitle || 'lato A'}
+        </text>
+        <line x1="30" y1="65" x2="270" y2="65" stroke="#c9412f" strokeWidth="1.5" />
+
+        <rect x="34" y="90" width="232" height="80" rx="6" fill="#0d0b10" />
+
+        <circle cx="90" cy="130" r="38" fill="#141119" stroke="#3a3540" strokeWidth="2" />
+        <g className={isPlaying ? 'reel spinning' : 'reel'} style={{ transformOrigin: '90px 130px' }}>
+          <ReelSpokes cx={90} cy={130} r={26} />
+          <circle cx="90" cy="130" r="9" fill="#0d0b10" stroke="#5a5548" strokeWidth="1.5" />
+        </g>
+
+        <circle cx="210" cy="130" r="38" fill="#141119" stroke="#3a3540" strokeWidth="2" />
+        <g className={isPlaying ? 'reel spinning' : 'reel'} style={{ transformOrigin: '210px 130px' }}>
+          <ReelSpokes cx={210} cy={130} r={26} />
+          <circle cx="210" cy="130" r="9" fill="#0d0b10" stroke="#5a5548" strokeWidth="1.5" />
+        </g>
+
+        <rect x="140" y="150" width="20" height="10" rx="2" fill="#0d0b10" stroke="#3a3540" />
+        <circle cx="60" cy="176" r="3" fill="#3a3540" />
+        <circle cx="240" cy="176" r="3" fill="#3a3540" />
+      </svg>
+    </div>
+  )
 }
 
 export default function App() {
@@ -84,7 +136,6 @@ export default function App() {
     return () => clearInterval(id)
   }, [isPlaying, chapterIndex])
 
-  // salva il progresso ogni volta che si cambia capitolo
   useEffect(() => {
     if (selectedCase) {
       saveProgress(selectedCase.id, chapterIndex)
@@ -197,8 +248,6 @@ export default function App() {
         <div className="player">
           <div className="player-top">
             <button className="back-btn" onClick={backToHome}>&larr; Elenco casi</button>
-            <div className="player-case-title">{selectedCase.title}</div>
-            <div className="chapter-title">{chapter.title}</div>
             <div className="chapter-indicator">
               Capitolo {chapterIndex + 1} di {selectedCase.chapters.length}
             </div>
@@ -208,6 +257,12 @@ export default function App() {
               </div>
             )}
           </div>
+
+          <Cassette
+            isPlaying={isPlaying}
+            caseTitle={selectedCase.title}
+            chapterTitle={chapter.title}
+          />
 
           <div>
             <div className="time-readout">

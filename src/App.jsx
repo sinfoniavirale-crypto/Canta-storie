@@ -114,17 +114,21 @@ export default function App() {
       setIsPlaying(false)
       return
     }
-    try {
-      await TextToSpeech.speak({
-        text: caso.chapters[index].text,
-        lang: 'it-IT',
-        rate: 0.88,
-        pitch: 0.92,
-        volume: 1.0,
-      })
-    } catch (e) {
-      setIsPlaying(false)
-      return
+    const chunks = splitTextIntoChunks(caso.chapters[index].text)
+    for (const chunk of chunks) {
+      if (!playingRef.current) return
+      try {
+        await TextToSpeech.speak({
+          text: chunk,
+          lang: 'it-IT',
+          rate: 0.88,
+          pitch: 0.92,
+          volume: 1.0,
+        })
+      } catch (e) {
+        setIsPlaying(false)
+        return
+      }
     }
     if (playingRef.current) {
       const next = index + 1

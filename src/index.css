@@ -88,7 +88,31 @@ body {
   width: 100%;
   margin-top: auto;
 }
+.cassette-wrap {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
 
+.cassette {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
+}
+
+.reel {
+  transition: none;
+}
+
+.reel.spinning {
+  animation: reel-spin 2.2s linear infinite;
+}
+
+@keyframes reel-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 .back-btn {
   background: none;
   border: 2px solid #c9412f;
